@@ -61,6 +61,17 @@
         $RestMethod = @{}
         if ($PSCmdlet.ParameterSetName -eq 'FileInformation') {
             $Boundary = [Guid]::NewGuid().ToString().Replace('-', '')
+            $fileSize = ((Get-Item $File).length/1MB)
+            if ($fileSize -gt 32) {
+                $RestMethodPreReq = @{
+                    Method      = 'POST'
+                    Uri         = 'https://www.virustotal.com/api/v3/files/upload_url'
+                    Headers     = @{
+                        "Accept"   = "application/json"
+                        'x-apikey' = $ApiKey
+                    }
+                }
+            }
             $RestMethod = @{
                 Method      = 'POST'
                 Uri         = 'https://www.virustotal.com/api/v3/files'
@@ -108,6 +119,10 @@
         }
         if ($RestMethod.Count -gt 0) {
             try {
+                if ($RestMethodPreReq ) {
+                    $InvokeApiOutputPreReq = Invoke-RestMethod @RestMethodPreReq -ErrorAction Stop
+                    $RestMethod['Uri'] = $InvokeApiOutputPreReq.data
+                }
                 $InvokeApiOutput = Invoke-RestMethod @RestMethod -ErrorAction Stop
                 $InvokeApiOutput
             } catch {
